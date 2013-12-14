@@ -185,15 +185,17 @@ def reconstruct(pyramid):
     output = np.zeros_like(pyramid[0][0])
 
     for i in xrange(pyramid[0].shape[0]):
+        # we only care about the real part
         real = np.cos(pyramid[1][i]) * pyramid[0][i]
 
+        # if it was one of the non-residual filters, we need to double it in order to 
+        # take into account it's opposite orientation counterpart. since mirroring around
+        # frequency 0 simply takes the conjugate of the Fourier transform result, we can
+        # simply double the real part (and safely ignore the imaginary)
         if (i > 1):
             real *= 2
 
-        #imag = np.sin(pyramid[1][i]) * pyramid[0][i]
-
         output += real
-        #output += imag
 
     return output
 
