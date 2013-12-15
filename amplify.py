@@ -4,6 +4,7 @@ from scipy import ndimage
 from scipy import signal
 import glob
 import unwrap
+import bilagrid
 
 io.baseInputPath = './'
 
@@ -225,8 +226,8 @@ def videoPyramid(video, numOrientations=4, numLevels=2):
 #   order - order of temporal filter (IIR)
 #   gains_y - gains to apply to each level of the pyramid
 #   gains_uv (optional) - if used, apply a different gain to the chroma components of the
-#       complex steerable pyramid
-def videoMagPhase(phasePyramid, magnitudePyramid, low, high, order, gains_y, gains_uv=None):
+#       complex steerable pyramid. not sure if necessary
+def videoMagPhase(phasePyramid, magnitudePyramid, low, high, order, gains_y, gains_uv=None, frame_write_path=None):
     for i in xrange(phasePyramid.shape[1]):
         print("Processing layer: " + str(i+1) + "/" + str(phasePyramid.shape[1]))
         phases = phasePyramid[:,i,:,:,:]
@@ -253,13 +254,24 @@ def videoMagPhase(phasePyramid, magnitudePyramid, low, high, order, gains_y, gai
 
         if gains_uv is not None:
             print("\tYUV to RGB")
-            phasePyramid[:,i,:,:,:] = YUV2RGB(phases + tbpPhases)
+            phases= YUV2RGB(phases - tbpPhases)
         else:
-            phasePyramid[:,i,:,:,:] = (phases + tbpPhases)
+            phases = (phases - tbpPhases)
+
+        # print("\tPhase denoising")
+        # phases = ndimage.filters.median_filter(phases, (1, 3, 3, 1))
+        # for j in xrange(phases.shape[0]):
+        #     print("\t\tFrame " + str(j+1) + "/" + str(phases.shape[0]))
+        #     phases[j] = bilagrid.bilateral_grid(phases[j], max(phases.shape[1], phases.shape[2])/50.0, 0.4)
+
+        phasePyramid[:,i,:,:,:] = phases
 
     print("Reconstructing")
 
     frame = np.zeros((phasePyramid.shape[2], phasePyramid.shape[3], phasePyramid.shape[4]))
+
+    if frame_write_path is None:
+        video = np.zeros((phasePyramid.shape[0], phasePyramid.shape[2], phasePyramid.shape[3], phasePyramid.shape[4]))
 
     for i in xrange(phasePyramid.shape[0]):
         print("Reconstructing frame " + str(i+1) + "/" + str(phasePyramid.shape[0]))
@@ -267,34 +279,40 @@ def videoMagPhase(phasePyramid, magnitudePyramid, low, high, order, gains_y, gai
         for j in xrange(3):
             frame[:,:,j] = reconstruct((magnitudePyramid[i,:,:,:,j], phasePyramid[i,:,:,:,j]))
 
-        io.imwrite(frame, "campus/campus" + str(i) + ".png")
+        if frame_write_path is not None:
+            io.imwrite(frame, frame_write_path + str(i).zfill(5) + ".png")
+        else:
+            video[i] = frame
 
-    return None
+    if frame_write_path is None:
+        return video
+    else:
+        return None
 
 def main():
     # print("Loading video")
-    # convertToNPY('me_feedback/', 'me_feedback.npy')
+    # convertToNPY('room/', 'room.npy')
 
-    # v=np.load('me_feedback.npy')
+    # v=np.load('room.npy')
 
     # print("Calculating pyramid. This may take a while.")
     # (mPyr, aPyr) = videoPyramid(v)
 
     # print("Saving magnitudes")
-    # np.save("/Volumes/Titanium/me_feedback0.npy", mPyr)
+    # np.save("/Volumes/Titanium/room0.npy", mPyr)
     # print("Saving phases")
-    # np.save("/Volumes/Titanium/me_feedback1.npy", aPyr)
+    # np.save("/Volumes/Titanium/room1.npy", aPyr)
 
     print("Loading magnitudes")
-    mPyr = np.load("/Volumes/Titanium/campus0.npy")
+    mPyr = np.load("/Volumes/Titanium/room0.npy")
     print("Loading phases")
-    aPyr = np.load("/Volumes/Titanium/campus1.npy")
+    aPyr = np.load("/Volumes/Titanium/room1.npy")
 
     # baby: 0.06, 0.10, 12, 3
 
     # temporal filter coefficients
-    low = 0.02
-    high = 0.05
+    low = 0.06
+    high = 0.15
     order = 2
 
     gains_y = 20*np.ones((aPyr.shape[1]))
@@ -304,15 +322,14 @@ def main():
     gains_uv[1] = 0
 
     # larger low pass gain
-    gains_y[0] *= 1
-    gains_uv[0] *= 1
+    gains_y[0] *= 2
+    gains_uv[0] *= 2
 
     # smaller high spatial frequency gains
-    gains_y[6:] *= 1
-    gains_uv[6:] *= 1
+    gains_y[6:] *= 0.5
+    gains_uv[6:] *= 0.5
 
-    amplifiedVideo = videoMagPhase(aPyr, mPyr, low, high, order, gains_y)
-    writeFrames(amplifiedVideo, "campus/")
+    videoMagPhase(aPyr, mPyr, low, high, order, gains_y, frame_write_path="room2/room")
 
 #the usual Python module business
 if __name__ == '__main__':
