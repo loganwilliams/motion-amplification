@@ -83,7 +83,10 @@ def timeBandPassButter(video, low, high, order=2):
 #   alphaY - luminance gain
 #   alphaUV - chrominance gain
 def videoMagButter(video, sigmaS, low, high, order, alphaY, alphaUV):
+    #np.savetxt("output.txt", video[:,203,176,:])
+
     video = RGB2YUV(video)
+    
     lowpassedVideo = lowPass(video, sigmaS)
 
     tbpVideo = timeBandPassButter(lowpassedVideo, low, high, order)
@@ -237,7 +240,7 @@ def videoMagPhase(phasePyramid, magnitudePyramid, low, high, order, gains_y, gai
             phases = RGB2YUV(phases)
 
         print("\tButterworth filter")
-        tbpPhases = timeBandPassButter(phases, low, high, order)
+        tbpPhases = timeBandPassButter(phases - phases[0], low, high, order)
 
         print("\tPhase amplification")
         diffPhase = np.diff(tbpPhases, n=1, axis=0)
@@ -254,9 +257,9 @@ def videoMagPhase(phasePyramid, magnitudePyramid, low, high, order, gains_y, gai
 
         if gains_uv is not None:
             print("\tYUV to RGB")
-            phases= YUV2RGB(phases - tbpPhases)
+            phases= YUV2RGB(phases + tbpPhases)
         else:
-            phases = (phases - tbpPhases)
+            phases = (phases + tbpPhases)
 
         # print("\tPhase denoising")
         # phases = ndimage.filters.median_filter(phases, (1, 3, 3, 1))
@@ -291,31 +294,37 @@ def videoMagPhase(phasePyramid, magnitudePyramid, low, high, order, gains_y, gai
 
 def main():
     # print("Loading video")
-    # convertToNPY('room/', 'room.npy')
+    # convertToNPY('crane/', 'crane.npy')
 
-    # v=np.load('room.npy')
+    # v=np.load('crane.npy')
+
+    # # np.savetxt("osc.txt",v[:,100,266,:])
 
     # print("Calculating pyramid. This may take a while.")
     # (mPyr, aPyr) = videoPyramid(v)
 
     # print("Saving magnitudes")
-    # np.save("/Volumes/Titanium/room0.npy", mPyr)
+    # np.save("/Volumes/Titanium/crane0.npy", mPyr)
     # print("Saving phases")
-    # np.save("/Volumes/Titanium/room1.npy", aPyr)
+    # np.save("/Volumes/Titanium/crane1.npy", aPyr)
+
+    # v = np.load('room.npy')
+    # v = videoMagButter(v, 5, 0.03, 0.08, 2, 50, 4)
+    # writeFrames(v, "room_lin/")
 
     print("Loading magnitudes")
     mPyr = np.load("/Volumes/Titanium/room0.npy")
     print("Loading phases")
     aPyr = np.load("/Volumes/Titanium/room1.npy")
 
-    # baby: 0.06, 0.10, 12, 3
+    # # baby: 0.06, 0.10, 12, 3
 
     # temporal filter coefficients
-    low = 0.06
-    high = 0.15
+    low = 0.03
+    high = 0.08
     order = 2
 
-    gains_y = 20*np.ones((aPyr.shape[1]))
+    gains_y = 15*np.ones((aPyr.shape[1]))
     gains_y[1] = 0 # no high-pass gain
 
     gains_uv = 4*np.ones((aPyr.shape[1]))
@@ -329,7 +338,7 @@ def main():
     gains_y[6:] *= 0.5
     gains_uv[6:] *= 0.5
 
-    videoMagPhase(aPyr, mPyr, low, high, order, gains_y, frame_write_path="room2/room")
+    videoMagPhase(aPyr, mPyr, low, high, order, gains_y, frame_write_path="room8/room")
 
 #the usual Python module business
 if __name__ == '__main__':
