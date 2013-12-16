@@ -40,3 +40,5 @@ nosetests.xml
 *.mov
 *.mp4
 
+amplify_test.py
+

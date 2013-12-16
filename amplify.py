@@ -292,58 +292,6 @@ def videoMagPhase(phasePyramid, magnitudePyramid, low, high, order, gains_y, gai
     else:
         return None
 
-def main():
-    # print("Loading video")
-    # convertToNPY('crane/', 'crane.npy')
-
-    # v=np.load('crane.npy')
-
-    # # np.savetxt("osc.txt",v[:,100,266,:])
-
-    # print("Calculating pyramid. This may take a while.")
-    # (mPyr, aPyr) = videoPyramid(v)
-
-    # print("Saving magnitudes")
-    # np.save("/Volumes/Titanium/crane0.npy", mPyr)
-    # print("Saving phases")
-    # np.save("/Volumes/Titanium/crane1.npy", aPyr)
-
-    # v = np.load('room.npy')
-    # v = videoMagButter(v, 5, 0.03, 0.08, 2, 50, 4)
-    # writeFrames(v, "room_lin/")
-
-    print("Loading magnitudes")
-    mPyr = np.load("/Volumes/Titanium/room0.npy")
-    print("Loading phases")
-    aPyr = np.load("/Volumes/Titanium/room1.npy")
-
-    # # baby: 0.06, 0.10, 12, 3
-
-    # temporal filter coefficients
-    low = 0.03
-    high = 0.08
-    order = 2
-
-    gains_y = 15*np.ones((aPyr.shape[1]))
-    gains_y[1] = 0 # no high-pass gain
-
-    gains_uv = 4*np.ones((aPyr.shape[1]))
-    gains_uv[1] = 0
-
-    # larger low pass gain
-    gains_y[0] *= 2
-    gains_uv[0] *= 2
-
-    # smaller high spatial frequency gains
-    gains_y[6:] *= 0.5
-    gains_uv[6:] *= 0.5
-
-    videoMagPhase(aPyr, mPyr, low, high, order, gains_y, frame_write_path="room8/room")
-
-#the usual Python module business
-if __name__ == '__main__':
-    main()
-
 ########### References ##################
 #   [1] http://people.csail.mit.edu/mrub/papers/vidmag.pdf
 #   [2] http://people.csail.mit.edu/billf/www/papers/phase-video.pdf
