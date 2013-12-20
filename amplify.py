@@ -108,7 +108,9 @@ def videoMagButter(video, sigmaS, low, high, order, alphaY, alphaUV):
 #   angleStart - minimum angle (orientation) of mask (inclusive)
 #   angleStop - maximum angle (orientation) of mask (exclusive)
 #   sigma - standard deviation of blur applied to mask (to limit sidelobes)
-def generateMask(height, width, radiusStart, radiusStop, angleStart, angleStop, sigma=10):
+def generateMask(height, width, radiusStart, radiusStop, angleStart, angleStop):
+    sigma = ((height*width)**(0.5))/20
+
     mask = np.zeros((height, width))
 
     for y in xrange(height):
@@ -158,13 +160,15 @@ def generateMasks(height, width, numOrientations=4, numLevels=2):
             oStart = 2*np.pi*float(o)/(numOrientations*2)
             oStop = 2*np.pi*float(o+1.0)/(numOrientations*2)
 
-            masks[l*numOrientations + o + 2] = generateMask(height, width, rStart, rStop, oStart, oStop)
+            masks[l*numOrientations + o + 2] = generateMask(height, width, rStart, rStop, oStart + np.pi/numOrientations, oStop + np.pi/numOrientations)
 
     return masks
 
 # generate a complex steerable pyramid [1] from image "im", using Fourier masks "ms"
 def generatePyramid(im, ms):
     im_fft = np.fft.fftshift(np.fft.fft2(im))
+
+    # io.imwriteSeq(np.abs(im_fft)/np.max(np.abs(im_fft)))
 
     ffts = np.ones_like(ms, dtype=np.dtype(complex))
 
@@ -175,11 +179,15 @@ def generatePyramid(im, ms):
         # use the mask to select the region of frequency space we want
         ffts[i] = im_fft * ms[i]
 
+        # io.imwriteSeq(np.abs(ffts[i])/np.max(np.abs(ffts[i])))
+
         # return to spatial space
         filtered = np.fft.ifft2(np.fft.ifftshift(ffts[i]))
 
         filtered_angle[i] = np.angle(filtered)
         filtered_mag[i] = np.abs(filtered)
+
+        # io.imwriteSeq(filtered_mag[i]/np.max(filtered_mag[i]))
 
     return (filtered_mag, filtered_angle)
 
@@ -242,6 +250,9 @@ def videoMagPhase(phasePyramid, magnitudePyramid, low, high, order, gains_y, gai
         print("\tButterworth filter")
         tbpPhases = timeBandPassButter(phases - phases[0], low, high, order)
 
+        # print("\tPhase denoising")
+        # tbpPhases = ndimage.filters.gaussian_filter(tbpPhases, (0,2,2,0))
+
         print("\tPhase amplification")
         diffPhase = np.diff(tbpPhases, n=1, axis=0)
 
@@ -260,12 +271,6 @@ def videoMagPhase(phasePyramid, magnitudePyramid, low, high, order, gains_y, gai
             phases= YUV2RGB(phases + tbpPhases)
         else:
             phases = (phases + tbpPhases)
-
-        # print("\tPhase denoising")
-        # phases = ndimage.filters.median_filter(phases, (1, 3, 3, 1))
-        # for j in xrange(phases.shape[0]):
-        #     print("\t\tFrame " + str(j+1) + "/" + str(phases.shape[0]))
-        #     phases[j] = bilagrid.bilateral_grid(phases[j], max(phases.shape[1], phases.shape[2])/50.0, 0.4)
 
         phasePyramid[:,i,:,:,:] = phases
 
