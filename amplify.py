@@ -148,13 +148,13 @@ def generateMasks(height, width, numOrientations=4, numLevels=2):
     masks = np.zeros((numOrientations*numLevels+2, height, width))
 
     # low pass
-    masks[0] = generateMask(height, width, 0, (1.0/(numLevels+1))**2, 0, 2*np.pi)
+    masks[0] = generateMask(height, width, 0, (1.0/(numLevels+1))**3, 0, 2*np.pi)
     # high pass
     masks[1] = np.ones((height, width)) - generateMask(height, width, 0, 1.0, 0, 2*np.pi)
 
     for l in xrange(numLevels):
-        rStart = (float(l+1.0)/(numLevels+1.0))**2
-        rStop = (float(l+2.0)/(numLevels+1.0))**2
+        rStart = (float(l+1.0)/(numLevels+1.0))**3
+        rStop = (float(l+2.0)/(numLevels+1.0))**3
 
         for o in xrange(numOrientations):
             oStart = 2*np.pi*float(o)/(numOrientations*2)
