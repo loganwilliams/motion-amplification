@@ -56,24 +56,8 @@ def lowPass(video, sigma):
 #   high - high frequency cutoff
 #   order - order of Butterworth filter
 def timeBandPassButter(video, low, high, order=2):
-    B,A = signal.butter(order, [low, high], 'bandpass')
-
-    butterVideo = np.zeros_like(video)
-
-    for i in xrange(video.shape[0]):
-        #print("filtering frame " + str(i))
-
-        for j in xrange(1, len(B)):
-            if ((i-j) >= 0):
-                butterVideo[i] += -A[j]*butterVideo[i-j]
-                butterVideo[i] += B[j]*video[i-j]
-            else:
-                butterVideo[i] += -A[j]*butterVideo[0]
-                butterVideo[i] += B[j]*video[0]
-
-        butterVideo[i] += video[i]*B[0]
-
-    return butterVideo/A[0]
+    B, A = signal.butter(order, [low, high], 'bandpass')
+    return signal.lfilter(B, A, video, axis=0)
 
 # Linear video magnification using Butterworth IIR filter
 #   video - input video to magnify
